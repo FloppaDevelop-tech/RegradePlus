@@ -12,7 +12,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // DOM Content Loaded
 document.addEventListener("DOMContentLoaded", () => {
@@ -109,7 +108,7 @@ function register() {
         });
 }
 
-// Submit Work Function
+// Submit Work Function - ใช้ Base64 (ไม่มี CORS issue)
 async function submitWork() {
     const msg = document.getElementById("msg");
 
@@ -135,24 +134,46 @@ async function submitWork() {
         return;
     }
 
-    msg.textContent = "กำลังอัปโหลด...";
+    // ตรวจสอบว่า user login อยู่จริง
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        msg.textContent = "Session หมดอายุ กรุณา login ใหม่";
+        msg.style.color = "red";
+        setTimeout(() => window.location.href = "index.html", 2000);
+        return;
+    }
+
+    msg.textContent = "กำลังประมวลผลรูป...";
     msg.style.color = "blue";
 
     try {
-        let imageUrls = [];
+        let imageData = [];
 
-        // Upload Multiple Images
+        // แปลงรูปเป็น Base64
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const fileRef = storage.ref(`submits/${uid}/${Date.now()}_${i}_${file.name}`);
             
-            msg.textContent = `กำลังอัปโหลดรูปที่ ${i + 1}/${files.length}...`;
+            msg.textContent = `กำลังประมวลผลรูปที่ ${i + 1}/${files.length}...`;
             
-            const snapshot = await fileRef.put(file);
-            const url = await snapshot.ref.getDownloadURL();
-            imageUrls.push(url);
+            // แปลงเป็น Base64
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            imageData.push({
+                data: base64,
+                name: file.name,
+                type: file.type,
+                size: file.size
+            });
         }
 
+        msg.textContent = "กำลังบันทึกข้อมูล...";
+
+        // บันทึกลง Firestore
         await db.collection("submits").add({
             uid,
             name,
@@ -161,14 +182,16 @@ async function submitWork() {
             subjectCode,
             subjectName,
             year,
-            images: imageUrls,
+            images: imageData,
+            imageCount: imageData.length,
             status: "รอตรวจ",
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        msg.textContent = `ส่งงานสำเร็จ! (อัปโหลด ${imageUrls.length} รูป)`;
+        msg.textContent = `ส่งงานสำเร็จ! (${imageData.length} รูป)`;
         msg.style.color = "green";
         
+        // Clear form
         document.getElementById("name").value = "";
         document.getElementById("class").value = "";
         document.getElementById("studentId").value = "";
@@ -178,13 +201,13 @@ async function submitWork() {
         document.getElementById("images").value = "";
     }
     catch (err) {
-        console.error(err);
+        console.error("Error:", err);
         msg.textContent = "เกิดข้อผิดพลาด: " + err.message;
         msg.style.color = "red";
     }
 }
 
-// Load History Function
+// Load History Function - รองรับทั้ง Base64 และ URL
 function loadHistory() {
     const uid = localStorage.getItem('uid');
     const container = document.getElementById('history-list');
@@ -214,24 +237,43 @@ function loadHistory() {
                 div.style.border = '1px solid #ddd';
                 div.style.borderRadius = '8px';
 
-                let filesHtml = "";
-                if (data.images && data.images.length > 0) {
-                    filesHtml = data.images.map((url, idx) => 
-                        `<a href="${url}" target="_blank" style="margin-right: 10px;">รูปที่ ${idx + 1}</a>`
-                    ).join("");
-                }
-
                 const timestamp = data.timestamp ? 
                     new Date(data.timestamp.toDate()).toLocaleString('th-TH') : 
                     "ไม่ทราบเวลา";
+
+                // สร้าง HTML สำหรับแสดงรูป
+                let imagesHtml = "";
+                if (data.images && data.images.length > 0) {
+                    imagesHtml = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;">';
+                    
+                    data.images.forEach((img, idx) => {
+                        // รองรับทั้ง Base64 (object) และ URL (string)
+                        const imgSrc = typeof img === 'string' ? img : img.data;
+                        const imgName = typeof img === 'string' ? `รูปที่ ${idx + 1}` : img.name;
+                        
+                        imagesHtml += `
+                            <div style="text-align: center;">
+                                <img src="${imgSrc}" 
+                                     style="max-width: 120px; max-height: 120px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; object-fit: cover;"
+                                     onclick="window.open('${imgSrc}', '_blank')"
+                                     title="คลิกเพื่อดูขนาดเต็ม">
+                                <div style="font-size: 11px; color: #666; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${imgName}</div>
+                            </div>
+                        `;
+                    });
+                    imagesHtml += '</div>';
+                }
 
                 div.innerHTML = `
                     <b>${data.subjectName || "ไม่มีชื่อวิชา"}</b> (${data.subjectCode || "-"})<br>
                     ชื่อ: ${data.name || "-"}<br>
                     ชั้น: ${data.classRoom || "-"}<br>
-                    สถานะ: <span style="color: orange;">${data.status || "รอตรวจ"}</span><br>
+                    รหัส นร.: ${data.studentId || "-"}<br>
+                    ปีการศึกษา: ${data.year || "-"}<br>
+                    สถานะ: <span style="color: orange; font-weight: bold;">${data.status || "รอตรวจ"}</span><br>
                     ส่งเมื่อ: ${timestamp}<br>
-                    ไฟล์ (${data.images.length} รูป): ${filesHtml || "ไม่มีไฟล์"}
+                    จำนวนรูป: ${data.imageCount || data.images.length} รูป
+                    ${imagesHtml}
                 `;
                 container.appendChild(div);
             });
