@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, LogOut, Upload, Eye, Edit2, Check, X, AlertCircle, CheckCircle, Trash2, ZoomIn, RotateCcw, Trash } from 'lucide-react';
+import { dataService } from './services/dataService';
 
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -10,11 +11,9 @@ const App = () => {
   const [searchType, setSearchType] = useState('name');
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
   const [viewImage, setViewImage] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Admin Secret Code
-  // SECURITY WARNING: Storing secrets in client-side code is not secure.
-  // Anyone can view this code by inspecting the source.
-  // For production, use a backend server for authentication.
   const ADMIN_SECRET_CODE = 'ADMIN2025';
 
   // Popup Function
@@ -31,42 +30,37 @@ const App = () => {
   }, []);
 
   const loadData = () => {
-    try {
-      const usersData = localStorage.getItem('users');
-      const submissionsData = localStorage.getItem('submissions');
+    const usersData = dataService.getUsers();
+    const submissionsData = dataService.getSubmissions();
 
-      if (usersData) setUsers(JSON.parse(usersData));
-      if (submissionsData) setSubmissions(JSON.parse(submissionsData));
-    } catch (error) {
-      console.log('No data found, starting fresh');
-    }
+    setUsers(usersData);
+    setSubmissions(submissionsData);
   };
 
-  // Storage Helpers with Error Handling
-  const saveToStorage = (key, data) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-      return true;
-    } catch (error) {
-      if (error.name === 'QuotaExceededError') {
+  // Storage Helpers (Refactored to use dataService)
+  const saveUsers = (newUsers) => {
+    const result = dataService.saveUsers(newUsers);
+    if (result.success) {
+      setUsers(newUsers);
+    } else {
+      if (result.error === 'QuotaExceededError') {
         showPopup('พื้นที่จัดเก็บเต็ม! กรุณาลบข้อมูลเก่าหรือลดขนาดรูปภาพ', 'error');
       } else {
         showPopup('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
-        console.error('Storage error:', error);
       }
-      return false;
-    }
-  };
-
-  const saveUsers = (newUsers) => {
-    if (saveToStorage('users', newUsers)) {
-      setUsers(newUsers);
     }
   };
 
   const saveSubmissions = (newSubmissions) => {
-    if (saveToStorage('submissions', newSubmissions)) {
+    const result = dataService.saveSubmissions(newSubmissions);
+    if (result.success) {
       setSubmissions(newSubmissions);
+    } else {
+      if (result.error === 'QuotaExceededError') {
+        showPopup('พื้นที่จัดเก็บเต็ม! กรุณาลบข้อมูลเก่าหรือลดขนาดรูปภาพ', 'error');
+      } else {
+        showPopup('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+      }
     }
   };
 
@@ -113,9 +107,18 @@ const App = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     setCurrentUser(null);
     setPage('login');
+    setShowLogoutConfirm(false);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   // Submit Work
@@ -130,81 +133,69 @@ const App = () => {
       status: 'ยังไม่ตรวจ'
     };
 
-    const updatedSubmissions = [...submissions, newSubmission];
-    saveSubmissions(updatedSubmissions);
-    showPopup('ส่งงานสำเร็จ!', 'success');
-    setPage('history');
+    // Use dataService directly for adding
+    const result = dataService.addSubmission(newSubmission);
+    if (result.success) {
+      loadData();
+      showPopup('ส่งงานสำเร็จ!', 'success');
+      setPage('history');
+    } else {
+      if (result.error === 'QuotaExceededError') {
+        showPopup('พื้นที่จัดเก็บเต็ม! กรุณาลบข้อมูลเก่าหรือลดขนาดรูปภาพ', 'error');
+      } else {
+        showPopup('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+      }
+    }
   };
 
   // Admin Functions
   const updateSubmissionStatus = (submissionId, newStatus) => {
-    const updatedSubmissions = submissions.map(sub =>
-      sub.id === submissionId ? { ...sub, status: newStatus } : sub
-    );
-    saveSubmissions(updatedSubmissions);
+    const result = dataService.updateSubmission(submissionId, { status: newStatus });
+    if (result.success) loadData();
   };
 
   const updateSubmission = (submissionId, updatedData) => {
-    const updatedSubmissions = submissions.map(sub => {
-      if (sub.id === submissionId) {
-        const updated = { ...sub, ...updatedData };
-        // ถ้าเปลี่ยนเป็น "ตรวจแล้ว" ให้บันทึกวันที่
-        if (updatedData.status === 'ตรวจแล้ว' && !sub.completedAt) {
-          updated.completedAt = new Date().toISOString();
-        }
-        return updated;
+    // ถ้าเปลี่ยนเป็น "ตรวจแล้ว" ให้บันทึกวันที่
+    if (updatedData.status === 'ตรวจแล้ว') {
+      const sub = submissions.find(s => s.id === submissionId);
+      if (sub && !sub.completedAt) {
+        updatedData.completedAt = new Date().toISOString();
       }
-      return sub;
-    });
-    saveSubmissions(updatedSubmissions);
-    showPopup('บันทึกข้อมูลสำเร็จ', 'success');
+    }
+
+    const result = dataService.updateSubmission(submissionId, updatedData);
+    if (result.success) {
+      loadData();
+      showPopup('บันทึกข้อมูลสำเร็จ', 'success');
+    }
   };
 
   const deleteSubmission = (submissionId) => {
-    const updatedSubmissions = submissions.map(sub =>
-      sub.id === submissionId ? { ...sub, isDeleted: true, deletedAt: new Date().toISOString() } : sub
-    );
-    saveSubmissions(updatedSubmissions);
-    showPopup('ย้ายงานไปถังขยะแล้ว', 'success');
+    const result = dataService.deleteSubmission(submissionId);
+    if (result.success) {
+      loadData();
+      showPopup('ย้ายงานไปถังขยะแล้ว', 'success');
+    }
   };
 
   const restoreSubmission = (submissionId) => {
-    const updatedSubmissions = submissions.map(sub => {
-      if (sub.id === submissionId) {
-        const { isDeleted, deletedAt, ...rest } = sub;
-        return rest;
-      }
-      return sub;
-    });
-    saveSubmissions(updatedSubmissions);
-    showPopup('กู้คืนงานสำเร็จ', 'success');
+    const result = dataService.restoreSubmission(submissionId);
+    if (result.success) {
+      loadData();
+      showPopup('กู้คืนงานสำเร็จ', 'success');
+    }
   };
 
   const permanentDeleteSubmission = (submissionId) => {
-    const updatedSubmissions = submissions.filter(sub => sub.id !== submissionId);
-    saveSubmissions(updatedSubmissions);
-    showPopup('ลบงานถาวรสำเร็จ', 'success');
+    const result = dataService.permanentDeleteSubmission(submissionId);
+    if (result.success) {
+      loadData();
+      showPopup('ลบงานถาวรสำเร็จ', 'success');
+    }
   };
 
   const getUserSubmissions = () => {
-    return submissions.filter(sub => sub.userId === currentUser.id);
-  };
-
-  const getGroupedSubmissions = () => {
-    const grouped = {};
-    submissions.forEach(sub => {
-      const key = sub.studentId;
-      if (!grouped[key]) {
-        grouped[key] = [];
-      }
-      grouped[key].push(sub);
-    });
-
-    Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-    });
-
-    return grouped;
+    return submissions.filter(sub => sub.userId === currentUser.id && !sub.isDeleted);
   };
 
   // Components
@@ -490,7 +481,7 @@ const App = () => {
           <h2>ส่งงานแก้</h2>
           <div>
             <button onClick={() => setPage('history')} style={{ marginRight: '10px', padding: '10px 20px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ประวัติ</button>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <button onClick={handleLogoutClick} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
               <LogOut size={16} /> ออกจากระบบ
             </button>
           </div>
@@ -595,7 +586,7 @@ const App = () => {
           <h2>ประวัติการส่งงาน ({userSubmissions.length} งาน)</h2>
           <div>
             <button onClick={() => setPage('submit')} style={{ marginRight: '10px', padding: '10px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ส่งงานใหม่</button>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <button onClick={handleLogoutClick} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
               <LogOut size={16} /> ออกจากระบบ
             </button>
           </div>
@@ -716,9 +707,14 @@ const App = () => {
     const [localSearchTerm, setLocalSearchTerm] = useState('');
     const [localSearchType, setLocalSearchType] = useState('name');
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [activeTab, setActiveTab] = useState('active'); // 'active' or 'trash'
 
     const getFilteredSubmissions = () => {
       const filtered = submissions.filter(sub => {
+        // Filter by deleted status based on active tab
+        if (activeTab === 'active' && sub.isDeleted) return false;
+        if (activeTab === 'trash' && !sub.isDeleted) return false;
+
         if (!localSearchTerm) return true;
         if (localSearchType === 'name') {
           return sub.userName.toLowerCase().includes(localSearchTerm.toLowerCase());
@@ -789,10 +785,46 @@ const App = () => {
               ตรวจแล้ว: {submissions.filter(s => s.status === 'ตรวจแล้ว').length} งาน
             </p>
           </div>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+          <button onClick={handleLogoutClick} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             <LogOut size={16} /> ออกจากระบบ
           </button>
         </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <button
+            onClick={() => setActiveTab('active')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: activeTab === 'active' ? '#2196F3' : '#e0e0e0',
+              color: activeTab === 'active' ? 'white' : '#333',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            งานทั้งหมด
+          </button>
+          <button
+            onClick={() => setActiveTab('trash')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: activeTab === 'trash' ? '#f44336' : '#e0e0e0',
+              color: activeTab === 'trash' ? 'white' : '#333',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            <Trash2 size={16} /> ถังขยะ
+          </button>
+        </div>
+
         <div style={{ marginBottom: '25px', display: 'flex', gap: '10px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd' }}>
           <select value={localSearchType} onChange={(e) => setLocalSearchType(e.target.value)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '180px' }}>
             <option value="name">ค้นหาด้วยชื่อ</option>
@@ -869,12 +901,25 @@ const App = () => {
                             {sub.status}
                           </span>
                           <div style={{ display: 'flex', gap: '5px' }}>
-                            <button onClick={() => handleEdit(sub)} style={{ padding: '6px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <Edit2 size={14} /> แก้ไข
-                            </button>
-                            <button onClick={() => setConfirmDelete(sub.id)} style={{ padding: '6px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <Trash2 size={14} /> ลบ
-                            </button>
+                            {activeTab === 'active' ? (
+                              <>
+                                <button onClick={() => handleEdit(sub)} style={{ padding: '6px 12px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <Edit2 size={14} /> แก้ไข
+                                </button>
+                                <button onClick={() => setConfirmDelete(sub.id)} style={{ padding: '6px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <Trash2 size={14} /> ลบ
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => restoreSubmission(sub.id)} style={{ padding: '6px 12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <RotateCcw size={14} /> กู้คืน
+                                </button>
+                                <button onClick={() => setConfirmDelete(sub.id)} style={{ padding: '6px 12px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <Trash size={14} /> ลบถาวร
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -929,11 +974,15 @@ const App = () => {
         {confirmDelete && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '400px', width: '90%' }}>
-              <h3 style={{ marginTop: 0, color: '#f44336' }}>ยืนยันการลบ</h3>
-              <p style={{ margin: '15px 0', color: '#666' }}>คุณแน่ใจหรือไม่ที่จะลบงานนี้? การกระทำนี้ไม่สามารถยกเลิกได้</p>
+              <h3 style={{ marginTop: 0, color: '#f44336' }}>ยืนยันการลบ{activeTab === 'trash' ? 'ถาวร' : ''}</h3>
+              <p style={{ margin: '15px 0', color: '#666' }}>
+                {activeTab === 'trash'
+                  ? 'คุณแน่ใจหรือไม่ที่จะลบงานนี้ถาวร? การกระทำนี้ไม่สามารถกู้คืนได้'
+                  : 'คุณแน่ใจหรือไม่ที่จะย้ายงานนี้ไปถังขยะ?'}
+              </p>
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button
-                  onClick={() => handleDelete(confirmDelete)}
+                  onClick={() => activeTab === 'trash' ? permanentDeleteSubmission(confirmDelete) : handleDelete(confirmDelete)}
                   style={{ flex: 1, padding: '10px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                   ยืนยันลบ
@@ -957,6 +1006,31 @@ const App = () => {
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       <ImageViewer />
       <PopupNotification />
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+            <h3 style={{ marginTop: 0, color: '#333' }}>ยืนยันการออกจากระบบ</h3>
+            <p style={{ margin: '15px 0', color: '#666' }}>คุณต้องการออกจากระบบใช่หรือไม่?</p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={confirmLogout}
+                style={{ flex: 1, padding: '10px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ออกจากระบบ
+              </button>
+              <button
+                onClick={cancelLogout}
+                style={{ flex: 1, padding: '10px', backgroundColor: '#757575', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slideIn {
           from {
