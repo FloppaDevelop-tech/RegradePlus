@@ -611,6 +611,7 @@ const HistoryPage = ({ currentUser, submissions, setPage, handleLogoutClick, set
 const AdminPage = ({ submissions, handleLogoutClick, updateSubmission, deleteSubmission, restoreSubmission, permanentDeleteSubmission, setViewImage }) => {
   const [filter, setFilter] = useState('all'); // all, pending, completed, trash
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch = sub.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -619,12 +620,37 @@ const AdminPage = ({ submissions, handleLogoutClick, updateSubmission, deleteSub
 
     if (!matchesSearch) return false;
 
-    if (filter === 'all') return sub.status !== 'trash'; // Assume 'trash' is the status for soft deleted
+    if (filter === 'all') return sub.status !== 'trash';
     if (filter === 'pending') return sub.status === 'ยังไม่ตรวจ';
     if (filter === 'completed') return sub.status === 'ตรวจแล้ว';
-    if (filter === 'trash') return sub.status === 'trash'; // Or however deleted is marked
+    if (filter === 'trash') return sub.status === 'trash';
     return true;
   });
+
+  // Group submissions by studentId
+  const groupedSubmissions = filteredSubmissions.reduce((acc, sub) => {
+    if (!acc[sub.studentId]) {
+      acc[sub.studentId] = {
+        studentName: sub.studentName,
+        studentId: sub.studentId,
+        grade: sub.grade,
+        submissions: []
+      };
+    }
+    acc[sub.studentId].submissions.push(sub);
+    return acc;
+  }, {});
+
+  const sortedGroups = Object.values(groupedSubmissions).sort((a, b) => a.studentId.localeCompare(b.studentId));
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'ตรวจแล้ว': return '#4CAF50';
+      case 'ยังไม่ตรวจ': return '#FFC107';
+      case 'trash': return '#9E9E9E';
+      default: return '#666';
+    }
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '20px auto', padding: '20px' }}>
@@ -653,100 +679,123 @@ const AdminPage = ({ submissions, handleLogoutClick, updateSubmission, deleteSub
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
-              <th style={{ padding: '12px', textAlign: 'left' }}>ชื่อ-สกุล</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>รหัส</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>วิชา</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>ชั้น/ปี</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>รูป</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>สถานะ</th>
-              <th style={{ padding: '12px', textAlign: 'center' }}>จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSubmissions.map(sub => (
-              <tr key={sub.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '12px' }}>{sub.studentName}</td>
-                <td style={{ padding: '12px' }}>{sub.studentId}</td>
-                <td style={{ padding: '12px' }}>
-                  <div>{sub.subjectCode}</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>{sub.subjectName}</div>
-                </td>
-                <td style={{ padding: '12px' }}>
-                  <div>{sub.grade}</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>{sub.year}</div>
-                </td>
-                <td style={{ padding: '12px' }}>
-                  {sub.images && sub.images.length > 0 ? (
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      {sub.images.slice(0, 2).map((img, idx) => (
-                        <img
-                          key={idx}
-                          src={img}
-                          alt="work"
-                          onClick={() => setViewImage(img)}
-                          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: '1px solid #eee' }}
-                        />
-                      ))}
-                      {sub.images.length > 2 && <span style={{ fontSize: '12px', alignSelf: 'center' }}>+{sub.images.length - 2}</span>}
-                    </div>
-                  ) : '-'}
-                </td>
-                <td style={{ padding: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+        {sortedGroups.map(group => (
+          <div key={group.studentId} style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflow: 'hidden', border: '1px solid #eee' }}>
+            <div style={{ padding: '15px', backgroundColor: '#f9f9f9', borderBottom: '1px solid #eee' }}>
+              <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{group.studentName}</h3>
+              <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>รหัส: {group.studentId} | ชั้น: {group.grade}</p>
+            </div>
+            <div style={{ padding: '10px' }}>
+              {group.submissions.map(sub => (
+                <div
+                  key={sub.id}
+                  onClick={() => setSelectedSubmission(sub)}
+                  style={{
+                    padding: '10px',
+                    borderBottom: '1px solid #f0f0f0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{sub.subjectCode}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>{sub.subjectName}</div>
+                  </div>
                   <span style={{
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    backgroundColor: sub.status === 'ตรวจแล้ว' ? '#E8F5E9' : sub.status === 'ยังไม่ตรวจ' ? '#FFF8E1' : '#eee',
-                    color: sub.status === 'ตรวจแล้ว' ? '#2E7D32' : sub.status === 'ยังไม่ตรวจ' ? '#F57F17' : '#666',
-                    fontSize: '12px',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    backgroundColor: getStatusColor(sub.status),
+                    color: 'white',
+                    fontSize: '10px',
                     fontWeight: 'bold'
                   }}>
                     {sub.status}
                   </span>
-                </td>
-                <td style={{ padding: '12px', textAlign: 'center' }}>
-                  <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                    {sub.status !== 'trash' ? (
-                      <>
-                        {sub.status !== 'ตรวจแล้ว' && (
-                          <button title="ตรวจแล้ว" onClick={() => updateSubmission(sub.id, { status: 'ตรวจแล้ว' })} style={{ padding: '6px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <Check size={16} />
-                          </button>
-                        )}
-                        {sub.status !== 'ยังไม่ตรวจ' && (
-                          <button title="รอตรวจ" onClick={() => updateSubmission(sub.id, { status: 'ยังไม่ตรวจ' })} style={{ padding: '6px', backgroundColor: '#FFC107', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            <RotateCcw size={16} />
-                          </button>
-                        )}
-                        <button title="ลบ" onClick={() => deleteSubmission(sub.id)} style={{ padding: '6px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button title="กู้คืน" onClick={() => restoreSubmission(sub.id)} style={{ padding: '6px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                          <RotateCcw size={16} />
-                        </button>
-                        <button title="ลบถาวร" onClick={() => permanentDeleteSubmission(sub.id)} style={{ padding: '6px', backgroundColor: '#B71C1C', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                          <Trash size={16} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredSubmissions.length === 0 && (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#666' }}>ไม่พบข้อมูล</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
+
+      {sortedGroups.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '50px', color: '#666' }}>ไม่พบข้อมูล</div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedSubmission && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedSubmission(null)}>
+          <div style={{ backgroundColor: 'white', padding: '30px', maxWidth: '600px', width: '90%', borderRadius: '8px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, borderBottom: '2px solid #4CAF50', paddingBottom: '10px' }}>รายละเอียดงาน</h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+              <div><strong>ชื่อ:</strong> {selectedSubmission.studentName}</div>
+              <div><strong>รหัส:</strong> {selectedSubmission.studentId}</div>
+              <div><strong>ชั้น:</strong> {selectedSubmission.grade}</div>
+              <div><strong>รหัสวิชา:</strong> {selectedSubmission.subjectCode}</div>
+              <div style={{ gridColumn: '1 / -1' }}><strong>ชื่อวิชา:</strong> {selectedSubmission.subjectName}</div>
+              <div><strong>ติด:</strong> {selectedSubmission.type}</div>
+              <div><strong>ปี:</strong> {selectedSubmission.year}</div>
+              <div style={{ gridColumn: '1 / -1' }}><strong>วันที่ส่ง:</strong> {new Date(selectedSubmission.date).toLocaleDateString('th-TH')}</div>
+            </div>
+
+            {selectedSubmission.images && selectedSubmission.images.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>รูปงาน:</strong>
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginTop: '10px', paddingBottom: '10px' }}>
+                  {selectedSubmission.images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt="work"
+                      onClick={() => setViewImage(img)}
+                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer', border: '1px solid #ddd' }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+              {selectedSubmission.status !== 'trash' ? (
+                <>
+                  {selectedSubmission.status !== 'ตรวจแล้ว' && (
+                    <button onClick={() => { updateSubmission(selectedSubmission.id, { status: 'ตรวจแล้ว' }); setSelectedSubmission(null); }} style={{ padding: '10px 15px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Check size={16} /> ตรวจแล้ว
+                    </button>
+                  )}
+                  {selectedSubmission.status !== 'ยังไม่ตรวจ' && (
+                    <button onClick={() => { updateSubmission(selectedSubmission.id, { status: 'ยังไม่ตรวจ' }); setSelectedSubmission(null); }} style={{ padding: '10px 15px', backgroundColor: '#FFC107', color: 'black', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <RotateCcw size={16} /> รอตรวจ
+                    </button>
+                  )}
+                  <button onClick={() => { deleteSubmission(selectedSubmission.id); setSelectedSubmission(null); }} style={{ padding: '10px 15px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Trash2 size={16} /> ลบ
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { restoreSubmission(selectedSubmission.id); setSelectedSubmission(null); }} style={{ padding: '10px 15px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <RotateCcw size={16} /> กู้คืน
+                  </button>
+                  <button onClick={() => { permanentDeleteSubmission(selectedSubmission.id); setSelectedSubmission(null); }} style={{ padding: '10px 15px', backgroundColor: '#B71C1C', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Trash size={16} /> ลบถาวร
+                  </button>
+                </>
+              )}
+              <button onClick={() => setSelectedSubmission(null)} style={{ padding: '10px 15px', backgroundColor: '#757575', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
