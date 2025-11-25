@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, LogOut, Upload, Eye, Edit2, Check, X, AlertCircle, CheckCircle, Trash2, ZoomIn, RotateCcw, Trash } from 'lucide-react';
+import { Search, LogOut, Upload, Eye, Edit2, Check, X, AlertCircle, CheckCircle, Trash2, ZoomIn, RotateCcw, Trash, Moon, Sun, Settings } from 'lucide-react';
 import './index.css';
 
 const App = () => {
@@ -11,6 +11,11 @@ const App = () => {
   const [searchType, setSearchType] = useState('name');
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
   const [viewImage, setViewImage] = useState(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme || 'light';
+  });
 
   // Admin Secret Code
   const ADMIN_SECRET_CODE = 'ADMIN2025';
@@ -34,6 +39,12 @@ const App = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Apply theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const loadData = () => {
     try {
@@ -103,6 +114,7 @@ const App = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setPage('login');
+    setConfirmLogout(false);
   };
 
   // Submit Work
@@ -200,12 +212,34 @@ const App = () => {
     return (
       <div className="main-header">
         <div className="header-content">
-          <h1 className="header-title">
-            RegradePlus<span>+</span>
-          </h1>
-          <p className="header-subtitle">
-            กลุ่มสาระการเรียนรู้วิทยาศาสตร์ & เทคโนโลยี
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%' }}>
+            <div style={{ flex: 1 }}>
+              <h1 className="header-title" style={{ textAlign: 'left', margin: 0 }}>
+                RegradePlus<span>+</span>
+              </h1>
+              <p className="header-subtitle" style={{ textAlign: 'left', margin: '5px 0 0 0' }}>
+                กลุ่มสาระการเรียนรู้วิทยาศาสตร์ & เทคโนโลยี
+              </p>
+            </div>
+            {currentUser && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  className="btn btn-outline"
+                  style={{ 
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  type="button"
+                >
+                  {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -244,13 +278,13 @@ const App = () => {
   };
 
   const PopupNotification = () => {
-    if (!popup.show) return null;
-
     const handleClose = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      setPopup({ show: false, message: '', type: 'success' });
+      setPopup(prev => ({ ...prev, show: false }));
     };
+
+    if (!popup.show) return null;
 
     return (
       <div className="popup-container">
@@ -264,6 +298,37 @@ const App = () => {
           >
             <X size={20} />
           </button>
+        </div>
+      </div>
+    );
+  };
+
+  const ConfirmLogoutDialog = () => {
+    if (!confirmLogout) return null;
+
+    return (
+      <div className="modal-overlay" onClick={() => setConfirmLogout(false)}>
+        <div className="modal-content" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+          <h3 style={{ marginTop: 0, color: 'var(--text-primary)' }}>ยืนยันการออกจากระบบ</h3>
+          <p style={{ margin: '15px 0', color: 'var(--text-secondary)' }}>
+            คุณแน่ใจหรือไม่ที่จะออกจากระบบ?
+          </p>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button 
+              onClick={handleLogout}
+              className="btn btn-danger"
+              style={{ flex: 1 }}
+            >
+              ออกจากระบบ
+            </button>
+            <button 
+              onClick={() => setConfirmLogout(false)}
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+            >
+              ยกเลิก
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -389,14 +454,15 @@ const App = () => {
       subjectCode: '',
       subjectName: '',
       type: 'ศูนย์',
-      year: new Date().getFullYear() + 543,
+      gradeYear: `${new Date().getFullYear() + 543}/${String((new Date().getFullYear() + 543) + 1).slice(-2)}`,
       date: new Date().toISOString().split('T')[0],
       images: []
     });
+    const [isDragging, setIsDragging] = useState(false);
 
-    const handleImageUpload = (e) => {
-      const files = Array.from(e.target.files);
-      Promise.all(files.map(file => {
+    const processFiles = (files) => {
+      const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'));
+      Promise.all(fileArray.map(file => {
         return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
@@ -405,6 +471,31 @@ const App = () => {
       })).then(images => {
         setFormData({ ...formData, images: [...formData.images, ...images] });
       });
+    };
+
+    const handleImageUpload = (e) => {
+      processFiles(e.target.files);
+    };
+
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(e.dataTransfer.files);
+      }
     };
 
     const removeImage = (index) => {
@@ -426,7 +517,7 @@ const App = () => {
         subjectCode: '',
         subjectName: '',
         type: 'ศูนย์',
-        year: new Date().getFullYear() + 543,
+        gradeYear: `${new Date().getFullYear() + 543}/${String((new Date().getFullYear() + 543) + 1).slice(-2)}`,
         date: new Date().toISOString().split('T')[0],
         images: []
       });
@@ -438,7 +529,7 @@ const App = () => {
           <h2>ส่งงานแก้</h2>
           <div>
             <button onClick={() => setPage('history')} style={{ marginRight: '10px', padding: '10px 20px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ประวัติ</button>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <button onClick={() => setConfirmLogout(true)} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }} type="button">
               <LogOut size={16} /> ออกจากระบบ
             </button>
           </div>
@@ -475,8 +566,8 @@ const App = () => {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>ปี (พ.ศ.): *</label>
-              <input type="number" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>ชั้นที่ติด-ปีการศึกษา: *</label>
+              <input type="text" value={formData.gradeYear} onChange={(e) => setFormData({ ...formData, gradeYear: e.target.value })} placeholder="เช่น 2567/68" required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>วันที่ส่ง: *</label>
@@ -486,13 +577,44 @@ const App = () => {
           
           <div style={{ marginTop: '20px' }}>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>รูปงานแก้: *</label>
-            <input type="file" multiple accept="image/*" onChange={handleImageUpload} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              style={{
+                border: `2px dashed ${isDragging ? 'var(--primary-green)' : 'var(--border-color)'}`,
+                borderRadius: '8px',
+                padding: '40px',
+                textAlign: 'center',
+                backgroundColor: isDragging ? 'var(--primary-green-light)' : 'transparent',
+                transition: 'all 0.3s',
+                cursor: 'pointer',
+                marginBottom: '15px'
+              }}
+              onClick={() => document.getElementById('file-upload').click()}
+            >
+              <Upload size={48} style={{ margin: '0 auto 15px', color: 'var(--primary-green)', opacity: 0.6 }} />
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                {isDragging ? 'วางไฟล์ที่นี่' : 'ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์'}
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                รองรับไฟล์รูปภาพ (JPG, PNG, GIF)
+              </p>
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+            </div>
             {formData.images.length > 0 && (
               <div style={{ marginTop: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
                 {formData.images.map((img, idx) => (
                   <div key={idx} style={{ position: 'relative' }}>
-                    <img src={img} alt={`preview ${idx}`} style={{ width: '100%', height: '120px', objectFit: 'cover', border: '2px solid #ddd', borderRadius: '4px' }} />
-                    <button type="button" onClick={() => removeImage(idx)} style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer', fontSize: '16px' }}>×</button>
+                    <img src={img} alt={`preview ${idx}`} style={{ width: '100%', height: '120px', objectFit: 'cover', border: '2px solid var(--border-color)', borderRadius: '4px' }} />
+                    <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(idx); }} style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                   </div>
                 ))}
               </div>
@@ -551,7 +673,7 @@ const App = () => {
           <h2 className="page-title">ประวัติการส่งงาน ({userSubmissions.length} งาน)</h2>
           <div>
             <button onClick={() => setPage('submit')} className="btn btn-primary" style={{ marginRight: '10px' }}>ส่งงานใหม่</button>
-            <button onClick={handleLogout} className="btn btn-danger">
+            <button onClick={() => setConfirmLogout(true)} className="btn btn-danger" type="button">
               <LogOut size={16} /> ออกจากระบบ
             </button>
           </div>
@@ -766,7 +888,7 @@ const App = () => {
               ถังขยะ: {submissions.filter(s => s.isDeleted).length} งาน
             </p>
           </div>
-          <button onClick={handleLogout} style={{ 
+          <button onClick={() => setConfirmLogout(true)} type="button" style={{ 
             padding: '12px 24px', 
             backgroundColor: '#f44336', 
             color: 'white', 
@@ -1026,7 +1148,15 @@ const App = () => {
                         </div>
                         <div style={{ marginBottom: '10px' }}>
                           <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>สถานะ:</label>
-                          <select value={editData.status} onChange={(e) => setEditData({ ...editData, status: e.target.value })} style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                          <select 
+                            value={editData.status} 
+                            onChange={(e) => {
+                              e.preventDefault();
+                              setEditData({ ...editData, status: e.target.value });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          >
                             <option value="ยังไม่ตรวจ">ยังไม่ตรวจ</option>
                             <option value="กำลังตรวจ">กำลังตรวจ</option>
                             <option value="ตรวจแล้ว">ตรวจแล้ว</option>
@@ -1276,6 +1406,7 @@ const App = () => {
       <Header />
       <ImageViewer />
       <PopupNotification />
+      <ConfirmLogoutDialog />
       {!currentUser && <LoginPage />}
       {currentUser && !currentUser.isAdmin && page === 'submit' && <SubmitWorkPage />}
       {currentUser && !currentUser.isAdmin && page === 'history' && <HistoryPage />}

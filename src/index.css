@@ -31,6 +31,22 @@ body {
   --shadow-green: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
+/* Dark Theme */
+[data-theme="dark"] {
+  --primary-green: #66bb6a;
+  --primary-green-dark: #4caf50;
+  --primary-green-light: #1b5e20;
+  --bg-light: #1a1a1a;
+  --bg-white: #2d2d2d;
+  --bg-dark: #242424;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-color: #404040;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-green: 0 4px 12px rgba(102, 187, 106, 0.3);
+}
+
 /* Animations */
 @keyframes slideIn {
   from {
@@ -109,7 +125,7 @@ body {
 .main-header {
   background-color: var(--bg-white);
   border-bottom: 2px solid var(--primary-green);
-  padding: 20px 30px;
+  padding: 12px 30px;
   box-shadow: var(--shadow);
   position: sticky;
   top: 0;
@@ -124,10 +140,11 @@ body {
 
 .header-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--text-primary);
   font-weight: bold;
   letter-spacing: -0.5px;
+  text-align: left;
 }
 
 .header-title span {
@@ -136,9 +153,10 @@ body {
 
 .header-subtitle {
   margin: 5px 0 0 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
   font-weight: 500;
+  text-align: left;
 }
 
 /* Buttons */
