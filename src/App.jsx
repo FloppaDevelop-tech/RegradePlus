@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, LogOut, Upload, Eye, Edit2, Check, X, AlertCircle, CheckCircle, Trash2, ZoomIn, RotateCcw, Trash } from 'lucide-react';
+import './index.css';
 
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -197,32 +198,12 @@ const App = () => {
   // Components
   const Header = () => {
     return (
-      <div style={{ 
-        backgroundColor: 'white', 
-        borderBottom: '2px solid #4CAF50', 
-        padding: '20px 30px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        animation: 'slideDown 0.5s ease-out'
-      }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <h1 style={{ 
-            margin: 0, 
-            fontSize: '28px', 
-            color: '#2c3e50',
-            fontWeight: 'bold',
-            letterSpacing: '-0.5px'
-          }}>
-            RegradePlus<span style={{ color: '#4CAF50' }}>+</span>
+      <div className="main-header">
+        <div className="header-content">
+          <h1 className="header-title">
+            RegradePlus<span>+</span>
           </h1>
-          <p style={{ 
-            margin: '5px 0 0 0', 
-            fontSize: '14px', 
-            color: '#7f8c8d',
-            fontWeight: '500'
-          }}>
+          <p className="header-subtitle">
             กลุ่มสาระการเรียนรู้วิทยาศาสตร์ & เทคโนโลยี
           </p>
         </div>
@@ -233,52 +214,27 @@ const App = () => {
   const ImageViewer = () => {
     if (!viewImage) return null;
 
+    const handleClose = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setViewImage(null);
+    };
+
     return (
       <div 
-        style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.9)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          zIndex: 10000,
-          cursor: 'pointer'
-        }} 
-        onClick={() => setViewImage(null)}
+        className="image-viewer-overlay"
+        onClick={handleClose}
       >
-        <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+        <div className="image-viewer-content" onClick={(e) => e.stopPropagation()}>
           <img 
             src={viewImage} 
             alt="Full view" 
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: '90vh', 
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }} 
+            className="image-viewer-img"
           />
           <button 
-            onClick={() => setViewImage(null)}
-            style={{ 
-              position: 'absolute', 
-              top: '-40px', 
-              right: '0', 
-              backgroundColor: 'white', 
-              border: 'none', 
-              borderRadius: '50%', 
-              width: '35px', 
-              height: '35px', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '20px',
-              fontWeight: 'bold'
-            }}
+            onClick={handleClose}
+            className="image-viewer-close"
+            type="button"
           >
             ×
           </button>
@@ -290,39 +246,21 @@ const App = () => {
   const PopupNotification = () => {
     if (!popup.show) return null;
 
+    const handleClose = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setPopup({ show: false, message: '', type: 'success' });
+    };
+
     return (
-      <div style={{ 
-        position: 'fixed', 
-        top: '20px', 
-        right: '20px', 
-        zIndex: 9999,
-        animation: 'slideIn 0.3s ease-out'
-      }}>
-        <div style={{ 
-          backgroundColor: popup.type === 'success' ? '#4CAF50' : '#f44336',
-          color: 'white',
-          padding: '16px 24px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          minWidth: '300px',
-          maxWidth: '500px'
-        }}>
+      <div className="popup-container">
+        <div className={`popup-content ${popup.type === 'error' ? 'error' : ''}`}>
           {popup.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
           <div style={{ flex: 1, fontSize: '15px', fontWeight: '500' }}>{popup.message}</div>
           <button 
-            onClick={() => setPopup({ show: false, message: '', type: 'success' })}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: 'white', 
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            onClick={handleClose}
+            className="popup-close-btn"
+            type="button"
           >
             <X size={20} />
           </button>
@@ -346,74 +284,53 @@ const App = () => {
     };
 
     return (
-      <div style={{ 
-        minHeight: 'calc(100vh - 100px)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        padding: '40px 20px'
-      }}>
-        <div style={{ 
-          maxWidth: '420px', 
-          width: '100%',
-          padding: '40px', 
-          border: '1px solid #e0e0e0', 
-          backgroundColor: 'white', 
-          borderRadius: '16px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          animation: 'fadeInUp 0.6s ease-out'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '28px', color: '#2c3e50' }}>
+      <div className="login-container">
+        <div className="form-container">
+          <div className="text-center" style={{ marginBottom: '30px' }}>
+            <h2 style={{ margin: '0 0 8px 0', fontSize: '28px', color: 'var(--text-primary)' }}>
               {isRegister ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
             </h2>
-            <p style={{ margin: 0, color: '#7f8c8d', fontSize: '14px' }}>
+            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>
               {isRegister ? 'สร้างบัญชีใหม่เพื่อเริ่มใช้งาน' : 'ยินดีต้อนรับกลับมา'}
             </p>
           </div>
           <form onSubmit={handleSubmit}>
             {isRegister && (
-              <div style={{ marginBottom: '20px', animation: 'fadeIn 0.3s ease-out' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#2c3e50', fontSize: '14px' }}>ชื่อ-นามสกุล</label>
+              <div className="form-group" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                <label className="form-label">ชื่อ-นามสกุล</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', transition: 'all 0.3s', outline: 'none' }}
-                  onFocus={(e) => e.target.style.borderColor = '#4CAF50'}
-                  onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                  className="form-input"
                 />
               </div>
             )}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#2c3e50', fontSize: '14px' }}>Email</label>
+            <div className="form-group">
+              <label className="form-label">Email</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="yourname@taweethapisek.ac.th"
                 required
-                style={{ width: '100%', padding: '12px 16px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', transition: 'all 0.3s', outline: 'none' }}
-                onFocus={(e) => e.target.style.borderColor = '#4CAF50'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                className="form-input"
               />
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#2c3e50', fontSize: '14px' }}>Password</label>
+            <div className="form-group">
+              <label className="form-label">Password</label>
               <input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
-                style={{ width: '100%', padding: '12px 16px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', transition: 'all 0.3s', outline: 'none' }}
-                onFocus={(e) => e.target.style.borderColor = '#4CAF50'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                className="form-input"
               />
             </div>
             
             {isRegister && (
-              <div style={{ marginBottom: '20px', animation: 'fadeIn 0.3s ease-out' }}>
+              <div className="form-group" style={{ animation: 'fadeIn 0.3s ease-out' }}>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px', transition: 'all 0.3s' }}>
                   <input
                     type="checkbox"
@@ -421,72 +338,41 @@ const App = () => {
                     onChange={(e) => setShowAdminCode(e.target.checked)}
                     style={{ marginRight: '10px', width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  <span style={{ fontSize: '14px', color: '#2c3e50', fontWeight: '500' }}>ฉันเป็น Admin (ต้องมีรหัส Admin)</span>
+                  <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>ฉันเป็น Admin (ต้องมีรหัส Admin)</span>
                 </label>
                 
                 {showAdminCode && (
                   <div style={{ marginTop: '12px', animation: 'fadeIn 0.3s ease-out' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#2c3e50', fontSize: '14px' }}>รหัส Admin</label>
+                    <label className="form-label">รหัส Admin</label>
                     <input
                       type="password"
                       value={formData.adminCode}
                       onChange={(e) => setFormData({ ...formData, adminCode: e.target.value })}
                       placeholder="กรุณาใส่รหัส Admin"
-                      style={{ width: '100%', padding: '12px 16px', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', transition: 'all 0.3s', outline: 'none' }}
-                      onFocus={(e) => e.target.style.borderColor = '#4CAF50'}
-                      onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                      className="form-input"
                     />
                   </div>
                 )}
               </div>
             )}
             
-            <button type="submit" style={{ 
-              width: '100%', 
-              padding: '14px', 
-              backgroundColor: '#4CAF50', 
-              color: 'white', 
-              border: 'none', 
-              cursor: 'pointer', 
-              borderRadius: '8px', 
-              fontWeight: 'bold', 
-              fontSize: '16px',
-              transition: 'all 0.3s',
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#45a049';
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 6px 16px rgba(76, 175, 80, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#4CAF50';
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.3)';
-            }}>
+            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '10px' }}>
               {isRegister ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}
             </button>
           </form>
-          <div style={{ textAlign: 'center', marginTop: '24px', padding: '20px 0', borderTop: '1px solid #e0e0e0' }}>
-            <span style={{ color: '#7f8c8d', fontSize: '14px' }}>
+          <div className="text-center" style={{ marginTop: '24px', padding: '20px 0', borderTop: '1px solid var(--border-color)' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
               {isRegister ? 'มีบัญชีแล้ว?' : 'ยังไม่มีบัญชี?'}
             </span>
-            <button onClick={() => {
-              setIsRegister(!isRegister);
-              setFormData({ email: '', password: '', name: '', adminCode: '' });
-              setShowAdminCode(false);
-            }} style={{ 
-              marginLeft: '8px', 
-              background: 'none', 
-              border: 'none', 
-              color: '#4CAF50', 
-              cursor: 'pointer', 
-              fontWeight: '600', 
-              fontSize: '14px',
-              transition: 'all 0.3s'
-            }}
-            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>
+            <button 
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setFormData({ email: '', password: '', name: '', adminCode: '' });
+                setShowAdminCode(false);
+              }}
+              className="btn-outline"
+              type="button"
+            >
               {isRegister ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
             </button>
           </div>
@@ -623,6 +509,7 @@ const App = () => {
   const HistoryPage = () => {
     const [localSearchTerm, setLocalSearchTerm] = useState('');
     const [localSearchType, setLocalSearchType] = useState('subject');
+    const [expandedSubmissions, setExpandedSubmissions] = useState({});
     
     const getFilteredSubmissions = () => {
       let filtered = getUserSubmissions();
@@ -641,142 +528,143 @@ const App = () => {
     };
     
     const userSubmissions = getFilteredSubmissions();
-    const [selectedSubmission, setSelectedSubmission] = useState(null);
+
+    const toggleDetail = (submissionId) => {
+      setExpandedSubmissions(prev => ({
+        ...prev,
+        [submissionId]: !prev[submissionId]
+      }));
+    };
 
     const getStatusColor = (status) => {
       switch(status) {
-        case 'ตรวจแล้ว': return '#4CAF50';
-        case 'กำลังตรวจ': return '#2196F3';
-        case 'ถูกลบ': return '#9E9E9E';
-        default: return '#FFC107';
+        case 'ตรวจแล้ว': return 'status-completed';
+        case 'กำลังตรวจ': return 'status-checking';
+        case 'ถูกลบ': return 'status-deleted';
+        default: return 'status-pending';
       }
     };
 
     return (
-      <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2>ประวัติการส่งงาน ({userSubmissions.length} งาน)</h2>
+      <div className="page-container">
+        <div className="page-header">
+          <h2 className="page-title">ประวัติการส่งงาน ({userSubmissions.length} งาน)</h2>
           <div>
-            <button onClick={() => setPage('submit')} style={{ marginRight: '10px', padding: '10px 20px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ส่งงานใหม่</button>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <button onClick={() => setPage('submit')} className="btn btn-primary" style={{ marginRight: '10px' }}>ส่งงานใหม่</button>
+            <button onClick={handleLogout} className="btn btn-danger">
               <LogOut size={16} /> ออกจากระบบ
             </button>
           </div>
         </div>
         
-        <div style={{ marginBottom: '25px', display: 'flex', gap: '10px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #ddd' }}>
-          <select value={localSearchType} onChange={(e) => setLocalSearchType(e.target.value)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', minWidth: '180px' }}>
+        <div className="search-container">
+          <select value={localSearchType} onChange={(e) => setLocalSearchType(e.target.value)} className="form-select" style={{ minWidth: '180px' }}>
             <option value="subject">ค้นหาด้วยชื่อวิชา</option>
             <option value="code">ค้นหาด้วยรหัสวิชา</option>
           </select>
-          <div style={{ position: 'relative', flex: 1 }}>
+          <div className="search-input-wrapper">
             <input
               type="text"
               placeholder={`ค้นหา${localSearchType === 'subject' ? 'ชื่อวิชา' : 'รหัสวิชา'}...`}
               value={localSearchTerm}
               onChange={(e) => setLocalSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '10px 40px 10px 10px', border: '1px solid #ddd', borderRadius: '4px' }}
+              className="search-input"
             />
-            <Search size={20} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+            <Search size={20} className="search-icon" />
           </div>
         </div>
         
         {userSubmissions.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '50px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #ddd' }}>
-            <p style={{ fontSize: '18px', color: '#666' }}>
+          <div className="empty-state">
+            <p className="empty-state-text">
               {localSearchTerm ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีประวัติการส่งงาน'}
             </p>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '15px' }}>
-            {userSubmissions.map(sub => (
-              <div key={sub.id} style={{ border: '1px solid #ddd', padding: '20px', cursor: 'pointer', backgroundColor: sub.isDeleted ? '#f5f5f5' : 'white', borderRadius: '8px', transition: 'transform 0.2s', opacity: sub.isDeleted ? 0.7 : 1 }} onClick={() => setSelectedSubmission(sub)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 10px 0' }}>
-                      {sub.subjectName} ({sub.subjectCode})
-                      {sub.isDeleted && <span style={{ marginLeft: '10px', fontSize: '14px', color: '#9E9E9E' }}>อยู่ในถังขยะ</span>}
-                    </h3>
-                    <p style={{ margin: '5px 0', color: '#666' }}>ติด {sub.type} | ส่งเมื่อ {new Date(sub.submittedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                    <p style={{ margin: '5px 0', color: '#666' }}>รูปงาน: {sub.images?.length || 0} รูป</p>
-                    {sub.isDeleted && (
-                      <p style={{ margin: '5px 0', color: '#f44336', fontSize: '13px' }}>
-                        ถูกย้ายไปถังขยะเมื่อ: {new Date(sub.deletedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    )}
+            {userSubmissions.map(sub => {
+              const isExpanded = expandedSubmissions[sub.id];
+              return (
+                <div key={sub.id} className="card card-border" style={{ opacity: sub.isDeleted ? 0.7 : 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: 'var(--text-primary)' }}>
+                        {sub.subjectName} ({sub.subjectCode})
+                        {sub.isDeleted && <span style={{ marginLeft: '10px', fontSize: '14px', color: '#9E9E9E' }}>อยู่ในถังขยะ</span>}
+                      </h3>
+                      <p style={{ margin: '5px 0', color: 'var(--text-secondary)' }}>ติด {sub.type} | ส่งเมื่อ {new Date(sub.submittedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      <p style={{ margin: '5px 0', color: 'var(--text-secondary)' }}>รูปงาน: {sub.images?.length || 0} รูป</p>
+                      {sub.isDeleted && (
+                        <p style={{ margin: '5px 0', color: '#f44336', fontSize: '13px' }}>
+                          ถูกย้ายไปถังขยะเมื่อ: {new Date(sub.deletedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      )}
+                    </div>
+                    <div className={`status-badge ${getStatusColor(sub.isDeleted ? 'ถูกลบ' : sub.status)}`} style={{ padding: '8px 16px' }}>
+                      {sub.isDeleted ? 'ถูกลบ' : sub.status}
+                    </div>
                   </div>
-                  <div style={{ padding: '8px 16px', backgroundColor: getStatusColor(sub.isDeleted ? 'ถูกลบ' : sub.status), color: 'white', borderRadius: '4px', fontWeight: 'bold' }}>
-                    {sub.isDeleted ? 'ถูกลบ' : sub.status}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {selectedSubmission && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setSelectedSubmission(null)}>
-            <div style={{ backgroundColor: 'white', padding: '30px', maxWidth: '700px', maxHeight: '85vh', overflow: 'auto', borderRadius: '8px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginTop: 0, borderBottom: '2px solid #4CAF50', paddingBottom: '10px' }}>รายละเอียดงาน</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                <div><strong>ชื่อ:</strong> {selectedSubmission.studentName}</div>
-                <div><strong>ชั้น:</strong> {selectedSubmission.grade}</div>
-                <div><strong>รหัสนักเรียน:</strong> {selectedSubmission.studentId}</div>
-                <div><strong>รหัสวิชา:</strong> {selectedSubmission.subjectCode}</div>
-                <div style={{ gridColumn: '1 / -1' }}><strong>ชื่อวิชา:</strong> {selectedSubmission.subjectName}</div>
-                <div><strong>ติด:</strong> {selectedSubmission.type}</div>
-                <div><strong>ปี:</strong> {selectedSubmission.year}</div>
-                <div style={{ gridColumn: '1 / -1' }}><strong>วันที่ส่ง:</strong> {new Date(selectedSubmission.date).toLocaleDateString('th-TH')}</div>
-                {selectedSubmission.completedAt && (
-                  <div style={{ gridColumn: '1 / -1', backgroundColor: '#e8f5e9', padding: '10px', borderRadius: '4px' }}>
-                    <strong>ตรวจเสร็จเมื่อ:</strong> {new Date(selectedSubmission.completedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                )}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <strong>สถานะ:</strong> 
-                  <span style={{ marginLeft: '10px', padding: '5px 12px', backgroundColor: getStatusColor(selectedSubmission.status), color: 'white', borderRadius: '4px', fontWeight: 'bold' }}>
-                    {selectedSubmission.status}
-                  </span>
-                </div>
-              </div>
-              
-              {selectedSubmission.images && selectedSubmission.images.length > 0 && (
-                <div style={{ marginTop: '20px' }}>
-                  <strong style={{ display: 'block', marginBottom: '10px' }}>รูปงาน ({selectedSubmission.images.length} รูป):</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                    {selectedSubmission.images.map((img, idx) => (
-                      <div 
-                        key={idx} 
-                        style={{ position: 'relative', cursor: 'pointer' }}
-                        onClick={() => setViewImage(img)}
-                      >
-                        <img 
-                          src={img} 
-                          alt={`work ${idx + 1}`} 
-                          style={{ width: '100%', height: '200px', objectFit: 'cover', border: '2px solid #ddd', borderRadius: '4px' }} 
-                        />
-                        <div style={{ 
-                          position: 'absolute', 
-                          top: '50%', 
-                          left: '50%', 
-                          transform: 'translate(-50%, -50%)',
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: 'white',
-                          padding: '8px',
-                          borderRadius: '50%',
-                          opacity: 0,
-                          transition: 'opacity 0.3s',
-                          pointerEvents: 'none'
-                        }}
-                        className="zoom-icon">
-                          <ZoomIn size={24} />
+                  
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); toggleDetail(sub.id); }}
+                    className={`detail-toggle ${isExpanded ? 'active' : ''}`}
+                    type="button"
+                  >
+                    {isExpanded ? '▼ ซ่อนรายละเอียด' : '▶ ดูรายละเอียด'}
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="detail-content">
+                      <div className="grid-2" style={{ marginBottom: '20px' }}>
+                        <div><strong>ชื่อ:</strong> {sub.studentName}</div>
+                        <div><strong>ชั้น:</strong> {sub.grade}</div>
+                        <div><strong>รหัสนักเรียน:</strong> {sub.studentId}</div>
+                        <div><strong>รหัสวิชา:</strong> {sub.subjectCode}</div>
+                        <div style={{ gridColumn: '1 / -1' }}><strong>ชื่อวิชา:</strong> {sub.subjectName}</div>
+                        <div><strong>ติด:</strong> {sub.type}</div>
+                        <div><strong>ปี:</strong> {sub.year}</div>
+                        <div style={{ gridColumn: '1 / -1' }}><strong>วันที่ส่ง:</strong> {new Date(sub.date).toLocaleDateString('th-TH')}</div>
+                        {sub.completedAt && (
+                          <div style={{ gridColumn: '1 / -1', backgroundColor: 'var(--primary-green-light)', padding: '10px', borderRadius: '4px' }}>
+                            <strong>ตรวจเสร็จเมื่อ:</strong> {new Date(sub.completedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <strong>สถานะ:</strong> 
+                          <span className={`status-badge ${getStatusColor(sub.status)}`} style={{ marginLeft: '10px', padding: '5px 12px' }}>
+                            {sub.status}
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      
+                      {sub.images && sub.images.length > 0 && (
+                        <div style={{ marginTop: '20px' }}>
+                          <strong style={{ display: 'block', marginBottom: '10px' }}>รูปงาน ({sub.images.length} รูป):</strong>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                            {sub.images.map((img, idx) => (
+                              <div 
+                                key={idx} 
+                                className="image-preview"
+                                onClick={() => setViewImage(img)}
+                              >
+                                <img 
+                                  src={img} 
+                                  alt={`work ${idx + 1}`} 
+                                  style={{ width: '100%', height: '200px', objectFit: 'cover', border: '2px solid var(--border-color)', borderRadius: '4px' }} 
+                                />
+                                <div className="zoom-icon">
+                                  <ZoomIn size={24} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-              <button onClick={() => setSelectedSubmission(null)} style={{ marginTop: '25px', padding: '12px 20px', width: '100%', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>ปิด</button>
-            </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -1384,28 +1272,10 @@ const App = () => {
 
   // Render
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div className="app-container">
+      <Header />
       <ImageViewer />
       <PopupNotification />
-      <style>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(400px);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .zoom-icon {
-          opacity: 0 !important;
-          transition: opacity 0.3s;
-        }
-        div:hover .zoom-icon {
-          opacity: 1 !important;
-        }
-      `}</style>
       {!currentUser && <LoginPage />}
       {currentUser && !currentUser.isAdmin && page === 'submit' && <SubmitWorkPage />}
       {currentUser && !currentUser.isAdmin && page === 'history' && <HistoryPage />}
